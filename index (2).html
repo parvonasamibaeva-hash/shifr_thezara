@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f6f7fc">
+  <meta name="description" content="Удобный шифр Цезаря: зашифровать или расшифровать текст с любым шагом сдвига.">
+  <title>Шифр Цезаря — шифрование и расшифровка текста</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17213a;
+      --muted: #7c859a;
+      --line: #e6eaf2;
+      --accent: #6849ed;
+      --accent-soft: #f0edff;
+      --surface: #ffffff;
+      --page: #f7f8fc;
+      --shadow: 0 22px 70px rgba(28, 39, 84, .07), 0 3px 12px rgba(28, 39, 84, .03);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(ellipse 60% 380px at 50% -10%, #e9e5ff 0%, transparent 90%), var(--page);
+      color: var(--ink);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 3px solid #b5a7ff;
+      outline-offset: 3px;
+    }
+
+    .shell { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 33px 0 10px; gap: 16px; }
+    .identity { display: inline-flex; align-items: center; gap: 13px; text-decoration: none; color: inherit; }
+    .logo {
+      display: grid; place-items: center; width: 42px; height: 42px;
+      background: var(--accent); color: white; border-radius: 13px;
+      box-shadow: 0 7px 18px rgba(104, 73, 237, .24);
+    }
+    .brand { font-size: 17px; font-weight: 780; letter-spacing: -.45px; }
+    .badge {
+      display: inline-flex; gap: 8px; align-items: center;
+      border: 1px solid #e5e8f0; padding: 10px 14px; border-radius: 999px;
+      color: #657088; font-size: 12px; font-weight: 650; background: rgba(255,255,255,.75);
+    }
+    .dot { width: 7px; height: 7px; background: #25b68b; border-radius: 100%; box-shadow: 0 0 0 3px #dbf7ed; }
+    .intro { padding: 66px 0 40px; text-align: center; }
+    .eyebrow { color: var(--accent); letter-spacing: .16em; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+    h1 { margin: 14px 0 13px; font-size: clamp(36px, 5vw, 59px); font-weight: 800; letter-spacing: -.065em; line-height: 1.11; }
+    .intro p { margin: 0 auto; color: #7d8799; line-height: 1.65; font-size: 15px; max-width: 530px; }
+
+    .app {
+      background: var(--surface); border: 1px solid #ecedf4; border-radius: 24px;
+      padding: 27px; box-shadow: var(--shadow);
+    }
+    .settings { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding-bottom: 25px; border-bottom: 1px solid var(--line); }
+    .setting-label { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #81899b; margin-bottom: 12px; }
+    .mode-group { display: inline-flex; align-items: center; background: #f4f5f9; padding: 5px; border-radius: 12px; gap: 3px; }
+    .mode-button { border: 0; color: #7b8497; font-size: 13px; font-weight: 720; background: transparent; border-radius: 9px; min-height: 37px; padding: 0 20px; transition: .2s; }
+    .mode-button:hover { color: var(--ink); }
+    .mode-button.active { color: var(--accent); background: #fff; box-shadow: 0 2px 7px rgba(29, 37, 70, .07); }
+    .shift-setting { width: 330px; max-width: 100%; }
+    .shift-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .shift-top .setting-label { margin: 0; }
+    .shift-value { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 760; color: var(--accent); }
+    .shift-number { background: var(--accent-soft); border: 1px solid #e5dcff; color: var(--accent); border-radius: 8px; width: 53px; height: 32px; text-align: center; font-size: 15px; font-weight: 800; appearance: textfield; -moz-appearance: textfield; }
+    .shift-number::-webkit-outer-spin-button, .shift-number::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .range-row { display: flex; align-items: center; gap: 11px; }
+    .range-bound { font-size: 11px; color: #a0a8b8; font-variant-numeric: tabular-nums; }
+    .range {
+      appearance: none; -webkit-appearance: none; flex: 1; width: 100%; height: 5px; border-radius: 100px;
+      background: linear-gradient(to right, var(--accent) 0 var(--fill, 6.25%), #e9eaf4 var(--fill, 6.25%) 100%);
+      cursor: pointer; outline-offset: 7px;
+    }
+    .range::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; height: 17px; width: 17px; border-radius: 100%; background: #fff; border: 5px solid var(--accent); box-shadow: 0 1px 6px #6954cc33; }
+    .range::-moz-range-thumb { height: 8px; width: 8px; border-radius: 100%; background: #fff; border: 5px solid var(--accent); box-shadow: 0 1px 6px #6954cc33; }
+    .panels { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; padding-top: 24px; }
+    .panel { display: flex; flex-direction: column; min-width: 0; }
+    .panel-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 11px; min-height: 30px; }
+    .panel-title { font-size: 13px; font-weight: 800; letter-spacing: -.12px; }
+    .panel-action { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; padding: 6px; border-radius: 8px; color: #969eb0; font-size: 12px; font-weight: 650; transition: color .2s, background .2s; }
+    .panel-action:hover { background: #f3f1ff; color: var(--accent); }
+    .text-area {
+      display: block; width: 100%; height: 290px; min-height: 210px; resize: vertical;
+      border: 1px solid #e5e9f1; border-radius: 15px; background: #fbfcff;
+      padding: 20px; font-size: 15px; line-height: 1.7; color: var(--ink);
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .text-area::placeholder { color: #b0b6c3; }
+    .text-area:focus { border-color: #b9adff; outline: none; box-shadow: 0 0 0 4px rgba(104,73,237,.07); }
+    .text-area.output { background: #f8f7ff; border-color: #e9e3ff; color: #5140b3; font-weight: 550; }
+    .text-area.output::placeholder { color: #b7aef0; }
+    .panel-foot { padding: 12px 1px 0; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #abb2c1; }
+    .ready { color: #8c79e4; display: inline-flex; gap: 6px; align-items: center; font-weight: 650; }
+    .ready-dot { width: 5px; height: 5px; border-radius: 50%; background: #9c83ff; }
+    .footer-row { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; padding: 22px 0 45px; color: #969fb0; font-size: 12px; }
+    .footer-row svg { color: #a59bdb; }
+    .toast { position: fixed; bottom: 25px; left: 50%; transform: translate(-50%, 15px); opacity: 0; pointer-events: none; background: #241a4b; color: #fff; font-size: 13px; font-weight: 700; padding: 12px 17px; border-radius: 11px; transition: .2s; z-index: 10; box-shadow: 0 8px 24px #1e165244; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    @media (max-width: 710px) {
+      .shell { width: min(100% - 24px, 540px); }
+      .topbar { padding-top: 20px; }
+      .intro { padding: 47px 4px 32px; }
+      .app { padding: 19px 16px 13px; border-radius: 19px; }
+      .settings { align-items: stretch; flex-direction: column; gap: 22px; }
+      .shift-setting { width: 100%; }
+      .panels { grid-template-columns: 1fr; gap: 21px; padding-top: 21px; }
+      .text-area { height: 188px; min-height: 155px; }
+      .badge { padding: 8px 10px; font-size: 11px; }
+      .mode-group, .mode-button { flex: 1; }
+      .intro p { max-width: 370px; font-size: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="identity" href="#main" aria-label="Шифр Цезаря, к приложению">
+        <span class="logo" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-8a5 5 0 0 0-5 5v.5"/><path d="m17 4 3 3-3 3"/><path d="M4 17h8a5 5 0 0 0 5-5v-.5"/><path d="m7 14-3 3 3 3"/></svg>
+        </span>
+        <span class="brand">Цезарь.</span>
+      </a>
+      <span class="badge"><span class="dot"></span>Работает без интернета</span>
+    </header>
+
+    <main id="main">
+      <section class="intro" aria-labelledby="heading">
+        <div class="eyebrow">ТЕКСТОВЫЙ ШИФРАТОР</div>
+        <h1 id="heading">Шифр Цезаря</h1>
+        <p>Зашифровывайте и расшифровывайте сообщения за пару секунд. Просто введите текст и выберите шаг сдвига.</p>
+      </section>
+
+      <section class="app" aria-label="Инструмент шифрования">
+        <div class="settings">
+          <div>
+            <div class="setting-label" id="mode-label">Режим работы</div>
+            <div class="mode-group" role="group" aria-labelledby="mode-label">
+              <button type="button" class="mode-button active" id="encrypt" aria-pressed="true">Зашифровать</button>
+              <button type="button" class="mode-button" id="decrypt" aria-pressed="false">Расшифровать</button>
+            </div>
+          </div>
+          <div class="shift-setting">
+            <div class="shift-top">
+              <label class="setting-label" for="shift-number">Шаг сдвига</label>
+              <span class="shift-value"><input class="shift-number" type="number" id="shift-number" min="1" max="33" value="3" aria-label="Шаг сдвига от 1 до 33"></span>
+            </div>
+            <div class="range-row">
+              <span class="range-bound" aria-hidden="true">1</span>
+              <input class="range" type="range" id="shift-range" min="1" max="33" value="3" aria-label="Настройка шага сдвига">
+              <span class="range-bound" aria-hidden="true">33</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panels">
+          <div class="panel">
+            <div class="panel-head">
+              <label class="panel-title" for="source">Исходный текст</label>
+              <button type="button" class="panel-action" id="clear" title="Очистить текст">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m5 4v6m4-6v6"/></svg>
+                Очистить
+              </button>
+            </div>
+            <textarea id="source" class="text-area" placeholder="Введите или вставьте свой текст здесь…" spellcheck="false" autocomplete="off" aria-describedby="source-count"></textarea>
+            <div class="panel-foot"><span id="source-count">0 символов</span><span>RU / EN</span></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <label class="panel-title" for="result" id="result-label">Зашифрованный текст</label>
+              <button type="button" class="panel-action" id="copy" title="Скопировать результат">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+                Копировать
+              </button>
+            </div>
+            <textarea id="result" class="text-area output" placeholder="Здесь появится ваш результат…" readonly spellcheck="false" aria-label="Результат шифрования"></textarea>
+            <div class="panel-foot"><span id="result-count">0 символов</span><span class="ready"><span class="ready-dot"></span><span id="result-status">Мгновенный результат</span></span></div>
+          </div>
+        </div>
+      </section>
+      <div class="footer-row">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="11" x="5" y="11" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span>Текст обрабатывается только на вашем устройстве</span><span aria-hidden="true">·</span><span>Русский и английский алфавиты</span>
+      </div>
+    </main>
+  </div>
+  <div class="toast" role="status" aria-live="polite" id="toast"></div>
+
+  <script>
+    (() => {
+      'use strict';
+      const alphabets = [
+        'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ',
+        'абвгдеёжзийклмнопрстуфхцчшщъыьэюя',
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+        'abcdefghijklmnopqrstuvwxyz'
+      ];
+
+      const source = document.getElementById('source');
+      const result = document.getElementById('result');
+      const shiftNumber = document.getElementById('shift-number');
+      const shiftRange = document.getElementById('shift-range');
+      const encryptButton = document.getElementById('encrypt');
+      const decryptButton = document.getElementById('decrypt');
+      const resultLabel = document.getElementById('result-label');
+      const resultStatus = document.getElementById('result-status');
+      const sourceCount = document.getElementById('source-count');
+      const resultCount = document.getElementById('result-count');
+      const toast = document.getElementById('toast');
+      let mode = 'encrypt';
+      let toastTimeout;
+
+      function cipher(text, shift) {
+        return Array.from(text, char => {
+          for (const alphabet of alphabets) {
+            const index = alphabet.indexOf(char);
+            if (index !== -1) {
+              const nextIndex = ((index + shift) % alphabet.length + alphabet.length) % alphabet.length;
+              return alphabet[nextIndex];
+            }
+          }
+          return char;
+        }).join('');
+      }
+
+      function charactersLabel(count) {
+        const lastTwo = count % 100;
+        const last = count % 10;
+        const suffix = (lastTwo >= 11 && lastTwo <= 14) ? 'символов' :
+          last === 1 ? 'символ' : (last >= 2 && last <= 4) ? 'символа' : 'символов';
+        return `${count.toLocaleString('ru-RU')} ${suffix}`;
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        window.clearTimeout(toastTimeout);
+        toastTimeout = window.setTimeout(() => toast.classList.remove('show'), 2100);
+      }
+
+      function update() {
+        const shift = Number(shiftRange.value) * (mode === 'decrypt' ? -1 : 1);
+        result.value = cipher(source.value, shift);
+        sourceCount.textContent = charactersLabel(Array.from(source.value).length);
+        resultCount.textContent = charactersLabel(Array.from(result.value).length);
+        resultStatus.textContent = source.value ? 'Готово' : 'Мгновенный результат';
+      }
+
+      function setShift(value) {
+        const number = Number(value);
+        const safe = Number.isFinite(number) ? Math.max(1, Math.min(33, Math.round(number))) : 3;
+        shiftRange.value = String(safe);
+        shiftNumber.value = String(safe);
+        shiftRange.style.setProperty('--fill', `${((safe - 1) / 32) * 100}%`);
+        update();
+      }
+
+      function setMode(next) {
+        mode = next;
+        encryptButton.classList.toggle('active', next === 'encrypt');
+        decryptButton.classList.toggle('active', next === 'decrypt');
+        encryptButton.setAttribute('aria-pressed', String(next === 'encrypt'));
+        decryptButton.setAttribute('aria-pressed', String(next === 'decrypt'));
+        resultLabel.textContent = next === 'encrypt' ? 'Зашифрованный текст' : 'Расшифрованный текст';
+        result.setAttribute('aria-label', resultLabel.textContent);
+        update();
+      }
+
+      source.addEventListener('input', update);
+      shiftRange.addEventListener('input', () => setShift(shiftRange.value));
+      shiftNumber.addEventListener('input', () => {
+        if (shiftNumber.value !== '') setShift(shiftNumber.value);
+      });
+      shiftNumber.addEventListener('blur', () => setShift(shiftNumber.value || shiftRange.value));
+      encryptButton.addEventListener('click', () => setMode('encrypt'));
+      decryptButton.addEventListener('click', () => setMode('decrypt'));
+
+      document.getElementById('clear').addEventListener('click', () => {
+        source.value = '';
+        update();
+        source.focus();
+      });
+
+      document.getElementById('copy').addEventListener('click', async () => {
+        if (!result.value) {
+          showToast('Сначала введите текст');
+          source.focus();
+          return;
+        }
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(result.value);
+          } else {
+            result.focus();
+            result.select();
+            if (!document.execCommand('copy')) throw new Error('Копирование недоступно');
+            result.setSelectionRange(0, 0);
+          }
+          showToast('Текст скопирован');
+        } catch (_) {
+          result.focus();
+          result.select();
+          showToast('Выделите текст и нажмите Ctrl+C');
+        }
+      });
+
+      setShift(3);
+    })();
+  </script>
+</body>
+</html>
